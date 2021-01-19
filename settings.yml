@@ -1,0 +1,8 @@
+serial:
+  name: port1
+  device: /dev/ttymxc0
+  dataSize: 8
+  baud: 9600
+  stopbits: 1
+  parity: N
+  timeout: 100
