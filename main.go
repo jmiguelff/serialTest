@@ -3,9 +3,10 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt"
+	"encoding/hex"
 	"io/ioutil"
 	"log"
+	"os"
 	"time"
 
 	"github.com/tarm/serial"
@@ -53,8 +54,8 @@ func main() {
 	// Serial port configuration
 	mode := setSerialMode(opts)
 
-	fmt.Println("Open serial port")
-	fmt.Println(*mode)
+	log.Println("Open serial port")
+	log.Println(*mode)
 
 	sfd, err := serial.OpenPort(mode)
 	if err != nil {
@@ -103,13 +104,27 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	log.Println("Receive the data")
+
 	// Receive all bytes
-	buf := make([]byte, 100000)
-	r, err := reader.Read(buf)
+	buf := make([]byte, 1000)
+	buf, err = reader.ReadBytes('\x2a')
 	if err != nil {
 		log.Println("Error reading serial buffer hopefuly we have some data")
 	}
 
-	log.Printf("% #x ", buf[:r])
+	fp, err := os.Create("output.bin")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer fp.Close()
 
+	_, err = fp.WriteString(hex.Dump(buf))
+	if err != nil {
+		log.Fatalln(err)
+	} else {
+		fp.Sync()
+	}
+
+	// fmt.Println(hex.Dump(buf))
 }
