@@ -104,13 +104,17 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	log.Println("Receive the data")
+	log.Println("Receive serial data")
 
 	// Receive all bytes
-	buf := make([]byte, 1000)
-	buf, err = reader.ReadBytes('\x2a')
-	if err != nil {
-		log.Println("Error reading serial buffer hopefuly we have some data")
+	var buf []byte
+	for {
+		b, err := reader.ReadByte()
+		if err != nil {
+			log.Println("Error or end of data, hopefuly we have some data")
+			break
+		}
+		buf = append(buf, b)
 	}
 
 	fp, err := os.Create("output.bin")
