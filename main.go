@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/tarm/serial"
@@ -131,4 +133,29 @@ func main() {
 	}
 
 	// fmt.Println(hex.Dump(buf))
+}
+
+// TODO: Rename struct to use it to pass also the file name
+func readFile() {
+	// open binary file
+	fd, err := os.Open("test.bin")
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+
+	s := bufio.NewScanner(fd)
+	var buf []byte
+	for s.Scan() {
+		arr := strings.Split(s.Text(), " ")
+		for _, v := range arr {
+			b, err := hex.DecodeString(v)
+			if err != nil {
+				log.Fatalln(err)
+				return
+			}
+			buf = append(buf, b...)
+		}
+	}
+	fmt.Println(hex.Dump(buf))
 }
