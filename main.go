@@ -40,6 +40,14 @@ func setSerialMode(c *serialConfigT) *serial.Config {
 }
 
 func main() {
+	fmt.Println("Select mode")
+	fmt.Println("1. Run SFSP commmad as client")
+	fmt.Println("2. Run SFSP command as server")
+
+	var option int
+	fmt.Scanf("%d", &option)
+	fmt.Println("Option ", option, "selected")
+
 	// Open settings file
 	fd, err := ioutil.ReadFile("settings.yml")
 	if err != nil {
@@ -65,11 +73,21 @@ func main() {
 	}
 	defer sfd.Close()
 
+	if option == 1 {
+		useSFSP(sfd)
+	} else if option == 2 {
+		simSFSP(sfd)
+	} else {
+		log.Println("Unknown option")
+	}
+}
+
+func useSFSP(sfd *serial.Port) {
 	// Sibas16 commands
 	cmd := []byte{'S', 'F', 'S', 'P'}
 
 	// Send 'S'
-	_, err = sfd.Write(cmd[:1])
+	_, err := sfd.Write(cmd[:1])
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -84,7 +102,7 @@ func main() {
 		log.Fatalln("Command 'S' does not match")
 	}
 
-	// Send 'P'
+	// Send 'F'
 	_, err = sfd.Write(cmd[1:2])
 	if err != nil {
 		log.Fatalln(err)
@@ -136,7 +154,7 @@ func main() {
 }
 
 // TODO: Rename struct to use it to pass also the file name
-func readFile() {
+func simSFSP(sfd *serial.Port) {
 	// open binary file
 	fd, err := os.Open("test.bin")
 	if err != nil {
@@ -157,5 +175,58 @@ func readFile() {
 			buf = append(buf, b...)
 		}
 	}
-	fmt.Println(hex.Dump(buf))
+	// fmt.Println(hex.Dump(buf))
+	// Sibas16 commands
+	cmd := []byte{'S', 'F', 'S', 'P'}
+
+	// Receive 'S'
+	reader := bufio.NewReader(sfd)
+	res, err := reader.ReadByte()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	if res != cmd[0] {
+		log.Fatalln("Unknown command from client", reader)
+	}
+
+	// Send 'S'
+	_, err = sfd.Write(cmd[:1])
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// Read 'F'
+	reader = bufio.NewReader(sfd)
+	res, err = reader.ReadByte()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	if res != cmd[1] {
+		log.Fatalln("Unknown command from client", reader)
+	}
+
+	// Send 'F'
+	_, err = sfd.Write(cmd[1:])
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// Read '0x0d'
+	reader = bufio.NewReader(sfd)
+	res, err = reader.ReadByte()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	if res != 0x0D {
+		log.Fatalln("Unknown command from client", reader)
+	}
+
+	// Send 'F'
+	_, err = sfd.Write(buf)
+	if err != nil {
+		log.Fatalln(err)
+	}
 }
