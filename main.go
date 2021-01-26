@@ -43,6 +43,7 @@ func main() {
 	fmt.Println("Select mode")
 	fmt.Println("1. Run SFSP commmad as client")
 	fmt.Println("2. Run SFSP command as server")
+	fmt.Println("3. Run FSPS command as client - uqe2400")
 
 	var option int
 	fmt.Scanf("%d", &option)
@@ -77,8 +78,83 @@ func main() {
 		useSFSP(sfd)
 	} else if option == 2 {
 		simSFSP(sfd)
+	} else if option == 3 {
+		useFSPS(sfd)
 	} else {
 		log.Println("Unknown option")
+	}
+}
+
+func sendByteWithEcho(sfd *serial.Port, b byte) int {
+	_, err := sfd.Write([]byte{b})
+	if err != nil {
+		log.Fatalln(err)
+		return -1
+	}
+
+	r := bufio.NewReader(sfd)
+	ret, err := r.ReadByte()
+	if err != nil {
+		log.Fatalln(err)
+		return -1
+	}
+
+	if ret != b {
+		log.Fatalln("Echo to byte", b, "does not match: ", ret)
+		return -1
+	}
+
+	return 0
+}
+
+func useFSPS(sfd *serial.Port) {
+	// Sibas16 commands
+	cmd := []byte{'F', 'S', 'P', 'S'}
+
+	// Send cmd with echo check
+	for _, v := range cmd {
+		log.Println("Send: ", v)
+		if sendByteWithEcho(sfd, v) < 0 {
+			return
+		}
+	}
+
+	// Send Enter
+	enterCmd := []byte{0x0D}
+	_, err := sfd.Write(enterCmd)
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+
+	log.Println("Waiting for serial data")
+
+	// Receive all bytes
+	var buf []byte
+	r := bufio.NewReader(sfd)
+	for {
+		b, err := r.ReadByte()
+		if err != nil {
+			log.Println("Error or end of data, hopefuly we have some data")
+			break
+		}
+		buf = append(buf, b)
+	}
+
+	fmt.Println(hex.Dump(buf))
+
+	// Store in file
+	fp, err := os.Create("output.bin")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer fp.Close()
+
+	_, err = fp.WriteString(hex.Dump(buf))
+	if err != nil {
+		log.Fatalln(err)
+	} else {
+		fp.Sync()
 	}
 }
 
